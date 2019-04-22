@@ -1,5 +1,50 @@
 # ratecounter
 
+
+## Sample benchmark
+
+```bash
+% ab -n 1000000 -c 100 "http://localhost:8081/"                                                                        :(
+
+...
+
+Server Software:        
+Server Hostname:        localhost
+Server Port:            8081
+
+Document Path:          /
+Document Length:        20 bytes
+
+Concurrency Level:      100
+Time taken for tests:   62.540 seconds
+Complete requests:      1000000
+Failed requests:        0
+Total transferred:      137000000 bytes
+HTML transferred:       20000000 bytes
+Requests per second:    15989.75 [#/sec] (mean)
+Time per request:       6.254 [ms] (mean)
+Time per request:       0.063 [ms] (mean, across all concurrent requests)
+Transfer rate:          2139.25 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    3   0.5      3      11
+Processing:     0    4   1.3      3      75
+Waiting:        0    3   1.3      2      75
+Total:          0    6   1.2      6      75
+
+Percentage of the requests served within a certain time (ms)
+  50%      6
+  66%      6
+  75%      7
+  80%      7
+  90%      7
+  95%      8
+  98%      9
+  99%     10
+ 100%     75 (longest request)
+```
+
 ## [ratecounter/counter](/counter/)
 
 * Counts increments with given precision `Accuracy` (as `time.Interval`).
@@ -113,50 +158,6 @@ Benchmarks of i/o
 ```bash
 % curl http://localhost:8081; echo
 00000000000000000017
-```
-
-## Sample benchmark
-
-```bash
-% ab -n 1000000 -c 100 "http://localhost:8081/"                                                                        :(
-
-...
-
-Server Software:        
-Server Hostname:        localhost
-Server Port:            8081
-
-Document Path:          /
-Document Length:        20 bytes
-
-Concurrency Level:      100
-Time taken for tests:   62.540 seconds
-Complete requests:      1000000
-Failed requests:        0
-Total transferred:      137000000 bytes
-HTML transferred:       20000000 bytes
-Requests per second:    15989.75 [#/sec] (mean)
-Time per request:       6.254 [ms] (mean)
-Time per request:       0.063 [ms] (mean, across all concurrent requests)
-Transfer rate:          2139.25 [Kbytes/sec] received
-
-Connection Times (ms)
-              min  mean[+/-sd] median   max
-Connect:        0    3   0.5      3      11
-Processing:     0    4   1.3      3      75
-Waiting:        0    3   1.3      2      75
-Total:          0    6   1.2      6      75
-
-Percentage of the requests served within a certain time (ms)
-  50%      6
-  66%      6
-  75%      7
-  80%      7
-  90%      7
-  95%      8
-  98%      9
-  99%     10
- 100%     75 (longest request)
 ```
 
 ## Misc

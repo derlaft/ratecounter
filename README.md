@@ -1,10 +1,26 @@
 # ratecounter
 
+# Sample test tool - HTTP server
+
+* Installation - `go get github.com/derlaft/ratecounter/cmd/rateserver`.
+* Run - `rateserver`.
+* Uses the first implementation (`ratecounter/counter`).
+* Listens on `127.0.0.1:8081` (`listenAddr` in [main.go](/cmd/rateserver/main.go))
+* Counts client requests (`windowSize=60s`, `accuracy=200ms` in [main.go](/cmd/rateserver/main.go)).
+* Saves data to disk on exit signal (`filename=state.rtt` in [main.go](/cmd/rateserver/main.go)).
+* Saves data to disk on a timer (`checkpointInterval=500ms` in [aux.go](/cmd/rateserver/aux.go)).
+* Only standard library is used (except for testing).
+* Request example:
+
+```bash
+% curl http://localhost:8081; echo
+00000000000000000017
+```
 
 ## Sample benchmark
 
 ```bash
-% ab -n 1000000 -c 100 "http://localhost:8081/"                                                                        :(
+% ab -n 1000000 -c 100 "http://localhost:8081/"
 
 ...
 
@@ -141,23 +157,6 @@ Benchmarks of i/o
     Fastest Time: 0.002s
     Slowest Time: 0.004s
     Average Time: 0.003s ± 0.000s
-```
-
-# Sample test tool - HTTP server
-
-* Installation - `go get github.com/derlaft/ratecounter/cmd/rateserver`.
-* Run - `rateserver`.
-* Uses the first implementation (`ratecounter/counter`).
-* Listens on `127.0.0.1:8081` (`listenAddr` in [main.go](/cmd/rateserver/main.go))
-* Counts client requests (`windowSize=60s`, `accuracy=200ms` in [main.go](/cmd/rateserver/main.go)).
-* Saves data to disk on exit signal (`filename=state.rtt` in [main.go](/cmd/rateserver/main.go)).
-* Saves data to disk on a timer (`checkpointInterval=500ms` in [aux.go](/cmd/rateserver/aux.go)).
-* Only standard library is used (except for testing).
-* Request example:
-
-```bash
-% curl http://localhost:8081; echo
-00000000000000000017
 ```
 
 ## Misc

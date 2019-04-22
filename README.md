@@ -1,8 +1,5 @@
 # ratecounter
 
-* No channels were used. It is very hard to use them here and still provide `Save()` and `Load()`.
-* No `sync/atomic` was used. This is not [a special, low-level application](https://golang.org/pkg/sync/atomic/). It also a common source of annoying bugs.
-
 ## [ratecounter/counter](/counter/)
 
 * Counts increments with given precision `Accuracy` (as `time.Interval`).
@@ -11,6 +8,33 @@
 * Low and somewhat constant memory consumption.
 * Saves data in JSON format.
 * Only standard library is used (except for testing).
+* tl;dr - fast enough implementation.
+
+```
+  Benchmarks of basic functionality
+
+  Ran 10 samples:
+  1kk calls to insert:
+    Fastest Time: 0.136s
+    Slowest Time: 0.146s
+    Average Time: 0.137s ± 0.003s
+  1kk calls to count:
+    Fastest Time: 0.144s
+    Slowest Time: 0.162s
+    Average Time: 0.147s ± 0.005s
+    
+  Benchmarks of i/o
+    
+  Ran 100 samples:
+  Save performance:
+    Fastest Time: 0.000s
+    Slowest Time: 0.000s
+    Average Time: 0.000s ± 0.000s
+  Load performance:
+    Fastest Time: 0.000s
+    Slowest Time: 0.000s
+    Average Time: 0.000s ± 0.000s
+```
 
 ## [ratecounter/nanocounter](/nanocounter/)
 
@@ -21,16 +45,64 @@
 * Higher memory consumption, relative to number of increments.
 * Saves data in binary format.
 * Only standard library is used (except for testing).
-* **May be usefull somewhere else, but not in this sample HTTP server (works only a little slower, but requires much higher IO usage).**
+* **tl;dr: May be usefull somewhere else** (storing some additional data with timestamps?), **but not in this sample HTTP server (works only a little slower, but requires much higher IO usage).**
+
+```
+  Benchmarks of basic functionality
+
+  Ran 10 samples:
+  Lots of calls to insert:
+    Fastest Time: 0.131s
+    Slowest Time: 0.170s
+    Average Time: 0.143s ± 0.011s
+  Lots of calls to count:
+    Fastest Time: 0.201s
+    Slowest Time: 0.211s
+    Average Time: 0.204s ± 0.003s
+
+Benchmarks of i/o
+
+  Ran 100 samples:
+  Lots of calls to save:
+    Fastest Time: 0.028s
+    Slowest Time: 0.044s
+    Average Time: 0.033s ± 0.003s
+  Lots of calls to load:
+    Fastest Time: 0.110s
+    Slowest Time: 0.148s
+    Average Time: 0.117s ± 0.006s
+```
 
 ## [ratecounter/external](/external/)
 
+* Really wanted to compare my results to some existing code.
 * Contains wrapper to compare performance with an [existing open-source implementation](https://github.com/paulbellamy/ratecounter).
+* Constant-time and the fastest `Count()`
+* Fastest `Incr()`.
+* `Save()` and `Load()` might be tricky to implement, but still possible.
+* Uses a timer in a separate routine to handle which [may be a problem in some rare conditions](https://github.com/paulbellamy/ratecounter/issues/14).
+* No dynamic allocations.
+* tl;dr: Superior library, ~~hire the author instead~~ should probably use it in production environment instead %)
+
+```
+  Benchmarks of basic functionality
+
+  Ran 10 samples:
+  1kk calls to insert:
+    Fastest Time: 0.024s
+    Slowest Time: 0.028s
+    Average Time: 0.025s ± 0.002s
+  1kk calls to count:
+    Fastest Time: 0.002s
+    Slowest Time: 0.004s
+    Average Time: 0.003s ± 0.000s
+```
 
 # Sample test tool - HTTP server
 
 * Installation - `go get github.com/derlaft/ratecounter/cmd/rateserver`.
 * Run - `rateserver`.
+* Uses the first implementation (`ratecounter/counter`).
 * Listens on `127.0.0.1:8081` (`listenAddr` in [main.go](/cmd/rateserver/main.go))
 * Counts client requests (`windowSize=60s`, `accuracy=200ms` in [main.go](/cmd/rateserver/main.go)).
 * Saves data to disk on exit signal (`filename=state.rtt` in [main.go](/cmd/rateserver/main.go)).
@@ -47,23 +119,8 @@
 
 ```bash
 % ab -n 1000000 -c 100 "http://localhost:8081/"                                                                        :(
-This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
-Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
-Licensed to The Apache Software Foundation, http://www.apache.org/
 
-Benchmarking localhost (be patient)
-Completed 100000 requests
-Completed 200000 requests
-Completed 300000 requests
-Completed 400000 requests
-Completed 500000 requests
-Completed 600000 requests
-Completed 700000 requests
-Completed 800000 requests
-Completed 900000 requests
-Completed 1000000 requests
-Finished 1000000 requests
-
+...
 
 Server Software:        
 Server Hostname:        localhost
@@ -101,3 +158,9 @@ Percentage of the requests served within a certain time (ms)
   99%     10
  100%     75 (longest request)
 ```
+
+## Misc
+
+* No channels or coroutines [were used](cmd/rateserver/main.go#L42) in the counter implementation.
+* No `sync/atomic` was used. This is not [a special, low-level application](https://golang.org/pkg/sync/atomic/). It also a common source of annoying bugs (okay, at least for me and people I worked with).
+* Full and correct gracefull termination of all modules is important and should be implemented.

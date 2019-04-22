@@ -43,5 +43,6 @@ func signalHandler(i iface.Counter) {
 	// exit
 	// it is probably a good idea to stop http server (and everything else) first when using it on a  real application
 
+	log.Println("Terminating")
 	os.Exit(0)
 }

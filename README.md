@@ -1,5 +1,8 @@
 # ratecounter
 
+* No channels were used. It is very hard to use them here and still provide `Save()` and `Load()`.
+* No `sync/atomic` was used. This is not [a special, low-level application](https://golang.org/pkg/sync/atomic/). It also a common source of annoying bugs.
+
 ## [ratecounter/counter](/counter/)
 
 * Counts increments with given precision `Accuracy` (as `time.Interval`).
@@ -19,6 +22,10 @@
 * Saves data in binary format.
 * Only standard library is used (except for testing).
 * **May be usefull somewhere else, but not in this sample HTTP server (works only a little slower, but requires much higher IO usage).**
+
+## [ratecounter/external](/external/)
+
+* Contains wrapper to compare performance with an [existing open-source implementation](https://github.com/paulbellamy/ratecounter).
 
 # Sample test tool - HTTP server
 

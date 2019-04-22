@@ -136,7 +136,7 @@ Benchmarks of i/o
 
 ## [ratecounter/external](/external/)
 
-* Really wanted to compare my results to some existing code.
+* Really wanted to compare my results to some existing code (but did not check out implementation details before finishing my own implementation).
 * Contains wrapper to compare performance with an [existing open-source implementation](https://github.com/paulbellamy/ratecounter).
 * Constant-time and the fastest `Count()`
 * Fastest `Incr()`.

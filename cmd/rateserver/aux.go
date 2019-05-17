@@ -1,10 +1,14 @@
 package main
 
 import (
-	"github.com/derlaft/ratecounter/iface"
+	"errors"
+	"github.com/derlaft/ratecounter/iplimiter"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -12,13 +16,13 @@ import (
 const checkpointInterval = time.Second / 2
 
 // checkpointSave dumps counter data to disk (every checkpointInterval)
-func checkpointSave(i iface.Counter) {
+func checkpointSave(i iplimiter.Limiter) {
 
 	// @TODO: gracefull termination
 
 	for range time.Tick(checkpointInterval) {
 
-		err := i.Save(filename)
+		err := saveToFile(i)
 		if err != nil {
 			log.Println("Warning: failed to save file", err)
 		}
@@ -27,7 +31,7 @@ func checkpointSave(i iface.Counter) {
 }
 
 // signalHandler terminates server on kill signal
-func signalHandler(i iface.Counter) {
+func signalHandler(i iplimiter.Limiter) {
 
 	// bind && wait signal
 	var sigs = make(chan os.Signal, 1)
@@ -35,7 +39,7 @@ func signalHandler(i iface.Counter) {
 	<-sigs
 
 	// save to file
-	err := i.Save(filename)
+	err := saveToFile(i)
 	if err != nil {
 		log.Fatal("Failed to save file", err)
 	}
@@ -45,4 +49,43 @@ func signalHandler(i iface.Counter) {
 
 	log.Println("Terminating")
 	os.Exit(0)
+}
+
+func saveToFile(i iplimiter.Limiter) error {
+	// cleanup
+	i.Cleanup()
+
+	// get data
+	data, err := i.SaveState()
+	if err != nil {
+		return err
+	}
+
+	// save it to file
+	return ioutil.WriteFile(filename, data, fileMode)
+}
+
+// some copy&paste frm production-grade (lolsad) code
+func determineUserIP(r *http.Request) (string, error) {
+
+	var ip string
+
+	// trying to parse by remote addr
+	remoteTokens := strings.Split(r.RemoteAddr, ":")
+	// ipv6 problems, yay
+	if len(remoteTokens) > 0 && !strings.HasPrefix(remoteTokens[0], "[") {
+		ip = remoteTokens[0]
+	}
+
+	// get ip by x-forwarded-for
+	if forwarded := r.Header.Get("X-Real-Ip"); forwarded > "" {
+		ip = forwarded
+	}
+
+	// if IP is empty, we could not determine the source IP; fallback to default
+	if ip == "" {
+		return "", errors.New("failed to determine source IP address")
+	}
+
+	return ip, nil
 }

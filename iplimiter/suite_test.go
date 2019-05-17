@@ -1,4 +1,4 @@
-package nanocounter
+package iplimiter
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMain(t *testing.T) {
+func TestPeripcounter(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Test implementation")
+	RunSpecs(t, "Peripcounter Suite")
 }

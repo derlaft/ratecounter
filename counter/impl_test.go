@@ -11,9 +11,8 @@ var _ = Describe("Impl", func() {
 
 	const bigNumber = 1000000
 
-	const testFilename = "testdata/state.json"
-
 	var i *counter
+	var fact *factory
 
 	BeforeEach(func() {
 
@@ -22,6 +21,8 @@ var _ = Describe("Impl", func() {
 			WindowSize: time.Millisecond * 100,
 			Accuracy:   time.Millisecond * 10,
 		}
+
+		fact = &factory{}
 	})
 
 	It("It works on basic values", func() {
@@ -56,24 +57,6 @@ var _ = Describe("Impl", func() {
 
 	}, 10)
 
-	Measure("Benchmarks of i/o", func(b Benchmarker) {
-
-		b.Time("Save performance", func() {
-			err := i.Save("testdata/write_test.json")
-			Ω(err).ToNot(HaveOccurred())
-		})
-
-		b.Time("Load performance", func() {
-			var ii = &counter{
-				WindowSize: time.Millisecond * 100,
-				Accuracy:   time.Millisecond * 10,
-			}
-			err := ii.Load("testdata/write_test.json")
-			Ω(err).ToNot(HaveOccurred())
-		})
-
-	}, 100)
-
 	It("Saving a counter into a file and then restoring it", func() {
 
 		By("Setting large window size")
@@ -87,17 +70,11 @@ var _ = Describe("Impl", func() {
 		Ω(i.Count()).ToNot(BeZero())
 
 		By("Saving file")
-		err := i.Save(testFilename)
+		data, err := i.Save()
 		Ω(err).ToNot(HaveOccurred())
 
-		By("Creating another instance")
-		var ii = &counter{
-			WindowSize: i.WindowSize,
-			Accuracy:   i.Accuracy,
-		}
-
-		By("Restoring values")
-		err = ii.Load(testFilename)
+		By("Loading an instance using factory")
+		ii, err := fact.Load(i.WindowSize, i.Accuracy, data)
 		Ω(err).ToNot(HaveOccurred())
 
 		By("Comparing old and new counters")

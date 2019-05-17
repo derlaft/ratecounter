@@ -2,14 +2,12 @@ package counter
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"os"
 )
 
 const fileMode = 0644
 
 // Save data to disk using json encoding
-func (c *counter) Save(filename string) (err error) {
+func (c *counter) Save() ([]byte, error) {
 
 	// locks here (don't want two saves at the same time)
 	c.Lock.Lock()
@@ -20,35 +18,26 @@ func (c *counter) Save(filename string) (err error) {
 
 	// want to write at least one value
 	if len(c.ProbeVals) <= 0 {
-		return nil
+		return nil, nil
 	}
 
 	// why json? it's easy to use
 	// and this time we don't have much data to write
 	bytes, err := json.Marshal(&c.ProbeVals)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	return ioutil.WriteFile(filename, bytes, fileMode)
+	return bytes, nil
 }
 
 // Load json-encoded data from disk
 // Clean old values after the load
 // Re-calculate sum counter.
-func (c *counter) Load(filename string) error {
-
-	// read and decode file
-	data, err := ioutil.ReadFile(filename)
-	if os.IsNotExist(err) {
-		// file not found - exit without error
-		return nil
-	} else if err != nil {
-		return err
-	}
+func (c *counter) Load(data []byte) error {
 
 	// decode values
-	err = json.Unmarshal(data, &c.ProbeVals)
+	err := json.Unmarshal(data, &c.ProbeVals)
 	if err != nil {
 		return err
 	}

@@ -2,34 +2,50 @@ package main
 
 import (
 	"fmt"
-	"github.com/derlaft/ratecounter/counter"
+	"github.com/derlaft/ratecounter/iplimiter"
+	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
 const (
 	// filename where counter data will be saved
 	filename   = "state.rtt"
-	listenAddr = "127.0.0.1:8081"
-	windowSize = time.Second * 60
+	fileMode   = 0644
+	listenAddr = "0.0.0.0:8081"
+	windowSize = time.Second * 20
 	// how accurate the counter should be
 	// every request time is rounded to this precision
 	accuracy = time.Second / 5
+	// request cut-out limit
+	maxRequests = 15
 )
 
 func main() {
 
-	i, err := counter.NewCounter(windowSize, accuracy)
-	if err != nil {
-		log.Fatal("Failed to initialize the counter")
-	}
+	factory := iplimiter.GetFactory(windowSize, accuracy, maxRequests)
 
-	err = i.Load(filename)
-	if err != nil {
+	var i iplimiter.Limiter
+
+	data, err := ioutil.ReadFile(filename)
+	if os.IsNotExist(err) {
+		// file not found
+		// create an empty counter
+		i = factory.New()
+	} else if err != nil {
+		// any other error
 		// probably not a good idea to die here
 		// depends on usage pattern
 		log.Fatal("Failed to restore state", err)
+	} else {
+		// data is loaded, we can just restore it
+		i, err = factory.Restore(data)
+		if err != nil {
+			log.Fatal("Failed to restore state", err)
+		}
 	}
 
 	// this will handle ^C
@@ -40,28 +56,56 @@ func main() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 
-		// I could potentially run this in a separate subroutine
-		// however, it does not actually change anything significantly
-		// and even makes everything a little bit slower.
-		// It would be possible to run a separate coroutine inside
-		// and remember the latest item.
-		// It's almost free anyway.
-		i.Incr()
+		totalRequests, err := processUserRequest(i, w, r)
+		if err != nil {
 
-		// I could also combine i.Incr() and i.Count(), but
-		// this would make this module practically useless
-		// outside the test task.
+			// write a bad respone code
+			w.WriteHeader(http.StatusInternalServerError)
 
-		_, err = fmt.Fprintf(w, fmt.Sprintf("%020d", i.Count()))
+			log.Println("Warning: error while processing request:", err)
+
+			_, err = fmt.Fprintf(w, fmt.Sprintf("Error while processing your request: %v\n", err))
+			if err != nil {
+				log.Println("Warning: http response write error:", err)
+			}
+
+			return
+		}
+
+		_, err = fmt.Fprintf(w, fmt.Sprintf("%05d\n", totalRequests))
 		if err != nil {
 			log.Println("Warning: http response write error:", err)
 		}
+
 	})
 
-	log.Println("Started listening")
+	log.Println("Started listening on", listenAddr)
 	err = http.ListenAndServe(listenAddr, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+}
+
+func processUserRequest(i iplimiter.Limiter, w http.ResponseWriter, r *http.Request) (int, error) {
+
+	ip, err := determineUserIP(r)
+	if err != nil {
+		return 0, fmt.Errorf("Warning: error while determining the user IP: %v", err)
+	}
+
+	// parse user IP
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return 0, fmt.Errorf("Warning: error while parsing IP %v", r.RemoteAddr)
+	}
+
+	// check if we pass this user throught
+	shouldReject := i.OnRequest(parsedIP)
+	if shouldReject {
+		return 0, fmt.Errorf("Too many requests from your IP (%v), go away", ip)
+	}
+
+	// answer the client safely
+	return i.TotalRequests(), nil
 }

@@ -1,5 +1,11 @@
 package iface
 
+import (
+	"time"
+)
+
+//go:generate mockgen -package counter_mocks -destination ../mocks/counter.go github.com/derlaft/ratecounter/iface Counter,CounterFactory
+
 // Counterer allows to keep track of number of events at given time window
 type Counter interface {
 
@@ -10,8 +16,14 @@ type Counter interface {
 	Count() int
 
 	// Save saves data to disk for future use
-	Save(fname string) error
+	Save() ([]byte, error)
+}
 
-	// Load restores previously-saved data
-	Load(fname string) error
+type CounterFactory interface {
+
+	// Create a new instance of a counter
+	New(windowSize, accuracy time.Duration) Counter
+
+	// Load an instance from a saved data
+	Load(windowSize, accuracy time.Duration, data []byte) (Counter, error)
 }

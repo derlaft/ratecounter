@@ -1,14 +1,13 @@
 package main
 
 import (
-	"errors"
 	"github.com/derlaft/ratecounter/iplimiter"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -68,24 +67,14 @@ func saveToFile(i iplimiter.Limiter) error {
 // some copy&paste frm production-grade (lolsad) code
 func determineUserIP(r *http.Request) (string, error) {
 
-	var ip string
-
-	// trying to parse by remote addr
-	remoteTokens := strings.Split(r.RemoteAddr, ":")
-	// ipv6 problems, yay
-	if len(remoteTokens) > 0 && !strings.HasPrefix(remoteTokens[0], "[") {
-		ip = remoteTokens[0]
-	}
-
-	// get ip by x-forwarded-for
 	if forwarded := r.Header.Get("X-Real-Ip"); forwarded > "" {
-		ip = forwarded
+		return forwarded, nil
 	}
 
-	// if IP is empty, we could not determine the source IP; fallback to default
-	if ip == "" {
-		return "", errors.New("failed to determine source IP address")
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return "", err
 	}
 
-	return ip, nil
+	return host, nil
 }
